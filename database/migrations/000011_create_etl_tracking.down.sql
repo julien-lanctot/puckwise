@@ -1,0 +1,3 @@
+DROP FUNCTION IF EXISTS complete_etl_run;
+DROP TABLE IF EXISTS data_source_sync CASCADE;
+DROP TABLE IF EXISTS etl_runs CASCADE;

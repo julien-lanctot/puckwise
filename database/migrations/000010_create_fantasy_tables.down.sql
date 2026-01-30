@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS fantasy_trades CASCADE;
+DROP TABLE IF EXISTS fantasy_rosters CASCADE;
+DROP TABLE IF EXISTS fantasy_teams CASCADE;
+DROP TABLE IF EXISTS fantasy_leagues CASCADE;

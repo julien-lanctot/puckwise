@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS skater_game_logs CASCADE;

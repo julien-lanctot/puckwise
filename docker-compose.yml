@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  db:
+    image: timescale/timescaledb:latest-pg15
+    container_name: puckwise_db
+    environment:
+      POSTGRES_USER: ${DB_USER:-puckwise}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-puckwise_dev}
+      POSTGRES_DB: ${DB_NAME:-hockey_analytics}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/scripts/init-timescaledb.sh:/docker-entrypoint-initdb.d/init.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-puckwise} -d ${DB_NAME:-hockey_analytics}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
