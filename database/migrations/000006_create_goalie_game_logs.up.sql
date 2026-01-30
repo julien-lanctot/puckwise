@@ -52,7 +52,7 @@ SELECT create_hypertable('goalie_game_logs', 'game_date', chunk_time_interval =>
 CREATE INDEX idx_goalie_logs_player_date ON goalie_game_logs(player_id, game_date DESC);
 CREATE INDEX idx_goalie_logs_game ON goalie_game_logs(game_id);
 CREATE INDEX idx_goalie_logs_team ON goalie_game_logs(team_id);
-CREATE UNIQUE INDEX idx_goalie_logs_unique ON goalie_game_logs(player_id, game_id);
+CREATE UNIQUE INDEX idx_goalie_logs_unique ON goalie_game_logs(player_id, game_id, game_date);
 
 -- Compression policy
 ALTER TABLE goalie_game_logs SET (

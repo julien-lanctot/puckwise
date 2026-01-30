@@ -153,3 +153,4 @@ puckwise/
 ## License
 
 Private - Personal use only
+  cd /mnt/c/Users/Julien/Desktop/MobileProjects/puckwise + docker compose up -d in wsl

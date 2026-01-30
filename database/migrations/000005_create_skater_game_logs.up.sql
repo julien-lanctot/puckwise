@@ -54,8 +54,8 @@ CREATE INDEX idx_skater_logs_game ON skater_game_logs(game_id);
 CREATE INDEX idx_skater_logs_team ON skater_game_logs(team_id);
 CREATE INDEX idx_skater_logs_player_game ON skater_game_logs(player_id, game_id);
 
--- Unique constraint (no duplicate entries)
-CREATE UNIQUE INDEX idx_skater_logs_unique ON skater_game_logs(player_id, game_id);
+-- Unique constraint (no duplicate entries) - must include partition column
+CREATE UNIQUE INDEX idx_skater_logs_unique ON skater_game_logs(player_id, game_id, game_date);
 
 -- Enable compression for older data (after 1 year)
 ALTER TABLE skater_game_logs SET (
