@@ -1,0 +1,26 @@
+[project]
+name = "hockey-analytics-ml"
+version = "0.1.0"
+description = "ML models for hockey fantasy analytics"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas>=2.0",
+    "numpy>=1.24",
+    "scikit-learn>=1.3",
+    "xgboost>=2.0",
+    "psycopg[binary,pool]>=3.1",
+    "python-dotenv>=1.0",
+    "joblib>=1.3",
+]
+
+[project.scripts]
+train = "ml.src.train.train:main"
+predict = "ml.src.predict.predict:main"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ml*"]

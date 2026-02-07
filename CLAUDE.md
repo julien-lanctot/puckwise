@@ -102,13 +102,45 @@ hockey-analytics/
 
 ## Development Order
 
-1. **Database** - Schema with TimescaleDB, migrations
-2. **ETL** - NHL API client, MoneyPuck downloader, loaders
-3. **Initial Load** - Historical data 2008-present
-4. **ML** - Feature engineering, baseline model, XGBoost
+1. **Database** - Schema with TimescaleDB, migrations ✅
+2. **ETL** - NHL API client, MoneyPuck downloader, loaders ✅
+3. **Initial Load** - Historical data 2008-present ✅
+4. **ML** - Feature engineering, baseline model, XGBoost ✅
 5. **API** - Go endpoints for players, projections, rosters
 6. **Frontend** - Dashboard, player browser, trade analyzer
 7. **Deploy** - Docker, VPS setup
+
+## Progress Log
+
+### Phase 1: Database ✅
+- PostgreSQL 15 with TimescaleDB extension
+- 11 migrations covering all entities
+- Tables: players, teams, seasons, games, skater/goalie_game_logs (hypertables), season_stats, advanced_stats, projections, fantasy tables
+- Docker Compose setup for local dev
+
+### Phase 2: ETL ✅
+- NHL API client (`etl/src/extract/nhl_api.py`, `nhl_stats_api.py`)
+- MoneyPuck CSV downloader (`etl/src/extract/moneypuck.py`)
+- Transform pipelines for players, game logs
+- Database loaders with upsert logic
+
+### Phase 3: Initial Load ✅
+- Loaded all data from 2008-2025
+- ~9,753 player-seasons of training data
+- Advanced stats (xG, Corsi, PDO, WAR) from MoneyPuck
+
+### Phase 4: ML ✅
+- Feature engineering (`ml/src/features/skater_features.py`):
+  - Historical PPG (1yr, 3yr, 5yr rolling)
+  - Age curves (peak 24-28, decline factor)
+  - Durability (games played %)
+  - Regression signals (shooting% z-score, PDO deviation, goals vs xG)
+- Models (`ml/src/models/`):
+  - Ridge regression baseline: MAE 9.69 pts, R² 0.640
+  - XGBoost: MAE 9.86 pts, R² 0.619
+- Prediction pipeline generates 721 player projections
+- Regression detection identifies buy-low/sell-high candidates
+- Top feature importances: ppg_1yr (30%), ppg_3yr (25%), ppg_5yr (11%)
 
 ## Fantasy Scoring (Configurable)
 
