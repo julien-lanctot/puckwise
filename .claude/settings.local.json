@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la \"C:\\\\Users\\\\Julien\\\\Desktop\\\\MobileProjects\\\\puckwise\\\\backend\"\" 2>&1 || ls -R \"C:UsersJulienDesktopMobileProjectspuckwisebackend\"\")",
+      "Bash(go mod tidy:*)",
+      "Bash(go build:*)",
+      "Bash(go vet:*)"
+    ]
+  }
+}
