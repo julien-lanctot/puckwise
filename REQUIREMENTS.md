@@ -1,537 +1,372 @@
-# Hockey Fantasy Analytics - Project Requirements
+# PuckWise - Product Requirements
 
-## Project Overview
+## Product Overview
 
-Build a predictive analytics platform for fantasy hockey that helps with drafting and trading decisions. The tool predicts player point progression throughout the season based on historical data, team performance, injuries, and advanced statistics.
+PuckWise is a paid SaaS platform for fantasy hockey analytics. It targets serious players — single-season, keeper, and dynasty — who want a genuine edge beyond what free tools offer.
+
+**Core differentiator:** Personalized, roster-aware recommendations. Generic rankings exist everywhere for free. PuckWise connects to a user's actual league (Yahoo, ESPN, Fantrax), imports their roster and scoring settings, and produces advice specific to *their* situation: who to pick up off waivers, which trade improves *their* team, how to win *their* category matchup this week.
+
+---
 
 ## Target Users
 
-- Personal use (single user initially)
-- Fantasy hockey players looking for data-driven draft and trade decisions
+- **Primary:** Serious single-season H2H or points league players. Multiple leagues. Play to win. Willing to pay $40-80/season.
+- **Secondary:** Keeper and dynasty players with longer time horizons. Higher engagement, higher willingness to pay ($80-120/season).
+- **Not targeted:** Casual players (won't pay), DFS players (different product entirely).
 
-## Core Features
+---
 
-### 1. Player Projections
+## Subscription Tiers
 
-#### Season Projections (for Drafting)
-- Predict full-season point totals for all NHL skaters and goalies
-- Provide confidence intervals (e.g., 10th/90th percentile outcomes)
-- Factor in:
-  - Historical point production (1yr, 3yr, 5yr rolling averages)
-  - Age curves (players peak ~24-28, decline after)
-  - Games played percentage (durability/injury history)
-  - Team context (projected team goal scoring)
-  - Line combinations and power play usage
-  - Advanced metrics (xG, Corsi, shooting percentage regression)
-
-#### Rolling Projections (for Trading)
-- Short-term predictions (next 2 weeks, next month)
-- Identify hot/cold streaks vs sustainable performance
-- Factor in schedule strength and recent form
-
-### 2. Regression Detection
-
-#### Buy-Low Candidates
-- Players with shooting percentage significantly below career average
-- Players with PDO (on-ice shooting% + save%) below 1.0
-- Players with goals below expected goals (xG)
-- Players returning from injury with depressed stats
-
-#### Sell-High Candidates
-- Players with unsustainably high shooting percentage
-- Players with PDO significantly above 1.0
-- Players with goals above expected goals
-- Players benefiting from temporary line/PP promotions
-
-### 3. Roster Management
-
-#### My Team Tracking
-- Import/manually add my fantasy roster
-- Track projected vs actual performance
-- Identify weak positions needing upgrades
-
-#### League Scouting
-- Add other managers' rosters from my league
-- Identify favorable trade targets on each team
-- Find players other managers might undervalue
-
-### 4. Trade Analyzer
-
-#### Trade Evaluation
-- Calculate "team improvement score" for proposed trades
-- Consider positional scarcity (VORP - Value Over Replacement Player)
-- Account for category balance (for category leagues)
-- Factor in schedule considerations (games remaining, playoff schedule)
-
-#### Trade Finder
-- Given my roster, suggest trades that improve my team
-- Identify win-win trades where both teams benefit
-- Rank trade targets by improvement potential
-
-### 5. Draft Tools
-
-#### Draft Rankings
-- Custom rankings based on league scoring settings
-- Support both category leagues and points leagues
-- Positional scarcity adjustments
-- ADP (Average Draft Position) comparison to identify value
-
-#### Draft Companion (Future)
-- Real-time draft tracker
-- Recommend best available player
-- Track positional needs as draft progresses
+| Feature | Free | Pro ($49/season) | Elite ($99/season) |
+|---|---|---|---|
+| Player rankings (top 100) | ✅ | ✅ | ✅ |
+| Full player database | ❌ | ✅ | ✅ |
+| Platform roster import | ❌ | ✅ | ✅ |
+| Waiver wire optimizer | ❌ | ✅ | ✅ |
+| Trade analyzer | Limited | ✅ | ✅ |
+| Category league support | ❌ | ✅ | ✅ |
+| Playoff schedule planner | ❌ | ✅ | ✅ |
+| Injury/scratch alerts | ❌ | ✅ | ✅ |
+| Multi-league support | 1 | 3 | Unlimited |
+| Dynasty/keeper tools | ❌ | ❌ | ✅ |
+| Trade value history | ❌ | ❌ | ✅ |
+| Rolling projections | ❌ | ✅ | ✅ |
 
 ---
 
 ## Data Sources
 
-### Primary: NHL API
-
-**Base URLs:**
+### NHL API (Primary)
 - Web API: `https://api-web.nhle.com/v1`
 - Stats API: `https://api.nhle.com/stats/rest/en`
+- Data: Game logs, rosters, schedules, season stats, injuries
+- Coverage: 2008–present
+- **Intraday pull:** Injuries and scratches at 4–6pm EST daily
 
-**Key Endpoints:**
-- `/player/{id}/landing` - Player bio and career info
-- `/player/{id}/game-log/{season}/{gameType}` - Game-by-game stats
-- `/roster/{team}/{season}` - Team rosters
-- `/standings/now` - Current standings with team info
-- `/skater/summary` (Stats API) - Season totals with pagination
-- `/goalie/summary` (Stats API) - Goalie season totals
+### MoneyPuck (Advanced Stats)
+- Base: `https://moneypuck.com/moneypuck/playerData`
+- Files: `seasonSummary/{year}/regular/skaters.csv`, `lines.csv`, `teams.csv`
+- Data: xG, Corsi, Fenwick, PDO, WAR, zone starts, quality of competition
+- Coverage: 2007–present
 
-**Data Available:**
-- Game logs back to ~2008-2009 season
-- Basic stats: G, A, P, +/-, PIM, PPP, SHP, SOG, TOI
-- Game context: home/away, opponent, date
+### Line Combinations
+- Source: Daily Face-Off scrape or community-maintained feed
+- Data: Line number (1–4), PP unit (PP1/PP2/none), updated daily
+- Critical for: context-aware projections and waiver wire recommendations
 
-### Secondary: MoneyPuck
-
-**Base URL:** `https://moneypuck.com/moneypuck/playerData`
-
-**Key Data Files:**
-- `seasonSummary/{year}/regular/skaters.csv` - Skater advanced stats
-- `seasonSummary/{year}/regular/goalies.csv` - Goalie advanced stats
-- `seasonSummary/{year}/regular/teams.csv` - Team advanced stats
-- `seasonSummary/{year}/regular/lines.csv` - Line combination stats
-- `playerBios/allPlayersLookup.csv` - Player biographical data
-- Shot data (zipped CSVs) - Individual shot-level data with xG
-
-**Advanced Stats Available:**
-- Expected Goals (xG) - individual and on-ice
-- Corsi/Fenwick (shot attempt metrics)
-- PDO (luck indicator)
-- Zone starts (offensive/defensive)
-- Quality of competition/teammates
-- WAR (Wins Above Replacement)
-- Per-60 rates for all counting stats
-
-**Historical Coverage:** 2007-2008 to present
-
-### Data Refresh Strategy
-
-- **Daily refresh** during NHL season (overnight batch)
-- **Initial load** of all historical data (2008-present)
-- Store raw data locally, transform into analytics-ready format
+### Platform APIs (User Roster Import)
+- **Yahoo Fantasy API** (OAuth 2.0): leagues, rosters, scoring settings, waiver wire
+- **ESPN Fantasy API** (unofficial): leagues, rosters, scoring settings
+- **Fantrax API** (unofficial): leagues, rosters, scoring settings
 
 ---
 
-## Technical Architecture
+## Core Features
 
-### Database: PostgreSQL + TimescaleDB
+### Priority 1 — Required Before Launch
 
-**Why TimescaleDB:**
-- Time-series optimization for game logs (millions of rows)
-- Automatic partitioning by time
-- Compression for historical data
-- Standard PostgreSQL compatibility
+#### 1. Auth & Multi-Tenancy
+- Email/password registration with email verification
+- JWT access tokens (15min) + refresh tokens (30 days)
+- All data scoped to authenticated user
+- Feature gating by subscription tier at middleware level
 
-**Core Tables:**
-1. `teams` - NHL team reference data
-2. `players` - Player biographical info
-3. `seasons` - Season metadata
-4. `games` - Game schedule and results
-5. `skater_game_logs` - Game-by-game skater stats (hypertable)
-6. `goalie_game_logs` - Game-by-game goalie stats (hypertable)
-7. `skater_season_stats` - Aggregated season totals
-8. `goalie_season_stats` - Aggregated goalie season totals
-9. `skater_advanced_stats` - MoneyPuck advanced metrics
-10. `team_season_stats` - Team-level stats
-11. `injuries` - Injury history
-12. `player_projections` - ML model outputs
-13. `fantasy_leagues` - League configuration
-14. `fantasy_teams` - Teams in a league
-15. `fantasy_rosters` - Player assignments to fantasy teams
-16. `etl_runs` - ETL job tracking
+#### 2. Platform Roster Import
+- Connect Yahoo (OAuth 2.0), ESPN, Fantrax
+- Auto-import: league settings, scoring weights, roster positions, roster itself
+- Daily background sync to keep rosters current
+- Manual sync trigger via UI
+- *This is table stakes. Without it, everything else is generic.*
 
-### Backend: Python (ETL + ML) + Go (API)
+#### 3. Waiver Wire Optimizer
+Personalized pickup recommendations ranked for the user's specific situation.
 
-**Python Components:**
-- Data extraction from NHL API and MoneyPuck
-- Data transformation and cleaning
-- Feature engineering for ML
-- Model training (scikit-learn, XGBoost/LightGBM)
-- Prediction generation
-
-**Go Components:**
-- REST API serving predictions and data
-- Roster management endpoints
-- Trade analysis logic
-- Authentication (future)
-
-**Why Split:**
-- Python excels at data science workloads
-- Go provides fast, type-safe API with low resource usage
-- ML models trained offline, predictions pre-computed daily
-- Go API just reads from database (simple, fast)
-
-### Frontend: React
-
-**Key Views:**
-1. **Dashboard** - Overview of my team, recent projections, alerts
-2. **Player Browser** - Search/filter all players, view projections
-3. **Player Detail** - Deep dive on single player (stats, charts, projections)
-4. **My Roster** - Current fantasy roster with projections
-5. **Trade Analyzer** - Input trades, see evaluation
-6. **Draft Board** - Pre-draft rankings and tools
-7. **League View** - All teams in my league for scouting
-
-**Charting:** Recharts or Tremor for data visualization
-
-### Deployment: Self-Hosted (Hetzner/OVH)
-
-**Infrastructure:**
-- Single VPS (4 vCPU, 8GB RAM recommended)
-- Docker Compose for all services
-- Coolify or manual Docker management
-- PostgreSQL with TimescaleDB in container
-- Nginx reverse proxy with SSL (Let's Encrypt)
-
-**Services:**
+**Score formula:**
 ```
-┌─────────────────────────────────────────┐
-│              Nginx (SSL)                │
-└─────────────────┬───────────────────────┘
-                  │
-        ┌─────────┴─────────┐
-        │                   │
-        ▼                   ▼
-┌───────────────┐   ┌───────────────┐
-│   React App   │   │    Go API     │
-│   (static)    │   │   :8080       │
-└───────────────┘   └───────┬───────┘
-                            │
-                            ▼
-                    ┌───────────────┐
-                    │  PostgreSQL   │
-                    │  + TimescaleDB│
-                    └───────────────┘
-                            ▲
-                            │
-                    ┌───────────────┐
-                    │  Python ETL   │
-                    │  (cron jobs)  │
-                    └───────────────┘
+pickup_score = VORP(pickup) - VORP(drop) + schedule_bonus(next_14_days) - roster_redundancy_penalty
 ```
 
----
+- Filters by user's roster construction (don't recommend a 4th center if already stacked at C)
+- Respects user's league's waiver rules (FAAB budget if applicable)
+- Ranks separately for points leagues vs category leagues
+- Shows reasoning: "Picks up 2 extra games this week, 3rd-best RW available"
 
-## ML Model Requirements
+#### 4. Injury & Scratch Alerts
+- Intraday ETL job (4–6pm EST) detects new injuries and lineup scratches
+- Alert delivered by email (Resend) and web push within 30min of confirmation
+- User sets alert preferences per player or for all rostered players
+- Alert types: injury (with severity), lineup scratch, lineup promotion
 
-### Target Variables
+#### 5. Stripe Billing
+- Subscription management (subscribe, upgrade, downgrade, cancel)
+- Webhook handler for subscription lifecycle events
+- Graceful tier downgrade (don't hard-block access mid-billing period)
+- Free tier available without payment info
 
-1. **Season Total Points** - Primary prediction target
-2. **Season Total Goals** - Secondary
-3. **Season Total Assists** - Secondary
-4. **Games Played** - For injury adjustment
+### Priority 2 — Core Differentiators
 
-### Feature Categories
+#### 6. Personalized Trade Analyzer
+Different from generic trade analyzers: evaluates trades relative to *this user's roster* and *their league's scoring*.
 
-#### Player Historical Features
-- Points per game (1yr, 3yr, 5yr rolling)
-- Goals per game (1yr, 3yr, 5yr)
-- Assists per game (1yr, 3yr, 5yr)
-- Games played per season (durability)
-- Shooting percentage (career, recent)
-- Power play points percentage
-- Age at start of season
+- Input: players offered vs players received
+- Output: net VORP impact for both sides, roster fit analysis, category impact
+- Flags if the trade makes both teams better (win-win) or one-sided
+- Shows what need the trade fills ("you're weak at C, this helps")
+- Trade suggestions: given user's roster, proactively surface favorable trade targets
 
-#### Team Context Features
-- Projected team goals for (based on roster)
-- Team power play efficiency
-- Line assignment (1st, 2nd, 3rd, 4th)
-- Power play unit (PP1, PP2, none)
-- Teammate quality (avg linemate points)
+#### 7. Category League H2H Optimizer
+For H2H categories leagues (most popular format, most underserved by analytics tools).
 
-#### Advanced Metrics (from MoneyPuck)
-- Expected goals (xG) vs actual goals
-- Corsi for percentage (CF%)
-- PDO (luck indicator)
-- Zone start percentage
-- Quality of competition
+- Project both teams' stat totals for the current week based on remaining games
+- Identify categories within reach (1 SD) vs categories to concede (too far ahead/behind)
+- Recommend streaming adds by target category
+- Weekly strategy brief: "Target SOG and PPP this week. Concede hits."
 
-#### Regression Indicators
-- Shooting % vs career average (z-score)
-- PDO deviation from 1.0
-- Goals above/below expected
-- On-ice shooting % vs league average
+#### 8. Playoff Schedule Planner
+Critical for H2H leagues in the stretch run.
 
-### Model Approach
+- For any date range (e.g., fantasy playoff weeks), compute games-played per player
+- Flag players with 4-game weeks, back-to-backs, favorable opponents
+- Recommend streaming adds specifically for schedule advantage
+- Show full team GP calendar for the playoff window
 
-**Phase 1: Baseline**
-- Linear regression with regularization (Ridge/Lasso)
-- Simple feature set (historical stats + age)
-- Establish baseline performance
+#### 9. Season Projections
+- Full-year point total predictions per player
+- Confidence intervals (10th / 50th / 90th percentile)
+- Per-category projections (G, A, SOG, hits, blocks) for category league users
+- Regression detection: buy-low / sell-high candidates based on PDO, xG, shooting%
+- Draft rankings configurable by league scoring type
 
-**Phase 2: Gradient Boosting**
-- XGBoost or LightGBM
-- Full feature set including advanced metrics
-- Hyperparameter tuning with cross-validation
+#### 10. Rolling Projections (2-Week)
+- Short-term predictions factoring schedule, recent form, opponent
+- Identifies hot/cold streaks vs sustainable performance
+- Powers the waiver wire optimizer's schedule component
 
-**Phase 3: Ensemble (Future)**
-- Combine multiple models
-- Separate models for different player archetypes
-- Position-specific models (F vs D vs G)
+### Priority 3 — Elite Tier / Retention
 
-### Evaluation Metrics
+#### 11. Dynasty & Keeper Tools
+- Prospect rankings with NHL ETA and upside tier
+- Aging curve projections (multi-year expected production)
+- Keeper cost analysis (is this player worth the cap hit or round cost?)
+- Dynasty trade analyzer with multi-year value weighting
+- Contract status and term (years of team control)
 
-- MAE (Mean Absolute Error) for point predictions
-- RMSE for overall accuracy
-- Correlation with actual results
-- Ranking accuracy (Spearman correlation for draft rankings)
-
----
-
-## Fantasy Scoring Systems to Support
-
-### Category Leagues (Head-to-Head)
-
-**Standard Skater Categories:**
-- Goals (G)
-- Assists (A)
-- Plus/Minus (+/-)
-- Penalty Minutes (PIM)
-- Power Play Points (PPP)
-- Shots on Goal (SOG)
-- Hits (HIT) - optional
-- Blocked Shots (BLK) - optional
-
-**Standard Goalie Categories:**
-- Wins (W)
-- Goals Against Average (GAA)
-- Save Percentage (SV%)
-- Shutouts (SO)
-
-### Points Leagues
-
-**Example Scoring (Yahoo Default):**
-- Goals: 3 points
-- Assists: 2 points
-- Plus/Minus: 0.5 points
-- PIM: 0.25 points
-- PPP: 1 point bonus
-- SOG: 0.3 points
-- Wins: 5 points
-- GA: -1 point
-- Saves: 0.2 points
-- Shutouts: 3 points
-
-**Configuration:**
-- Allow custom scoring weights
-- Store league settings in database
-- Calculate fantasy value using configured weights
+#### 12. Trade Value Tracker
+- 30/60/90-day value trend per player
+- Shows how a player's perceived trade value has moved
+- Context: "Value up 15% since line promotion 3 weeks ago"
 
 ---
 
-## API Endpoints (Go)
+## ML Model
 
-### Players
-- `GET /api/players` - List all players (paginated, filterable)
-- `GET /api/players/:id` - Player detail with projections
-- `GET /api/players/:id/game-log` - Player game history
-- `GET /api/players/:id/projections` - All projections for player
-- `GET /api/players/search?q=` - Search players by name
+### Current State (Phase 4 Complete)
+- Ridge regression: MAE 9.69 pts, R² 0.640
+- XGBoost: MAE 9.86 pts, R² 0.619
+- 721 projections, trained on 9,753 player-seasons (2008–2025)
+- Top features: ppg_1yr (30%), ppg_3yr (25%), ppg_5yr (11%)
 
-### Projections
-- `GET /api/projections/current` - Current season projections
-- `GET /api/projections/rankings` - Draft rankings
-- `GET /api/projections/regression` - Buy-low/sell-high candidates
+### Required Improvements for Paid Product
 
-### Fantasy
-- `GET /api/leagues` - List my leagues
-- `POST /api/leagues` - Create a league
-- `GET /api/leagues/:id/teams` - Teams in a league
-- `POST /api/leagues/:id/teams` - Add a team
-- `GET /api/teams/:id/roster` - Team roster
-- `POST /api/teams/:id/roster` - Add player to roster
-- `DELETE /api/teams/:id/roster/:playerId` - Remove player
+**Target MAE: below 8.5 points** (required to be competitive with professional tools)
 
-### Trades
-- `POST /api/trades/analyze` - Analyze a proposed trade
-- `GET /api/trades/suggestions` - Get trade suggestions for my team
+**New features to add:**
+- `games_missed_per_season_avg` — injury history (1yr, 3yr)
+- `injury_type_risk` — encoded severity category from injury history
+- `games_in_next_14_days` — schedule density for rolling projections
+- `home_away_ratio_next_14` — travel context
+- `back_to_backs_next_14` — fatigue factor
+- `line_number` — 1st/2nd/3rd line encoding
+- `pp_unit` — PP1/PP2/none encoding
+- `avg_linemate_ppg_1yr` — teammate quality on current line
+- `last_14_day_ppg` — recent form vs season average
+- `recent_form_delta` — divergence from projection (hot/cold signal)
 
-### Teams (NHL)
-- `GET /api/nhl/teams` - List NHL teams
-- `GET /api/nhl/teams/:id/roster` - Current NHL roster
-- `GET /api/nhl/teams/:id/schedule` - Team schedule
+**Per-category outputs:**
+Current model outputs points only. Need separate projections for G, A, SOG, hits, blocks to support category leagues. Options:
+- Multi-output regression (single model, multiple targets)
+- Separate models per stat category
+
+**In-season retraining:**
+- Monthly retrain October–April using actual season data
+- Early-season prior weighted toward historical (first 20 games: 70% historical / 30% current)
+- After 40 games: weight shifts to 40/60; after 60 games: 20/80
+
+**Ensemble:**
+Blend Ridge + XGBoost + recent-form time-series component (exponential weighted moving average of last 14 days).
+
+### Regression Detection Logic
+- Shooting% z-score > 2.0: sell-high
+- Shooting% z-score < -2.0: buy-low
+- PDO > 1.02: sell-high (lucky)
+- PDO < 0.98: buy-low (unlucky)
+- Goals > xG by 1.5 SD: sell-high
+- Goals < xG by 1.5 SD: buy-low
 
 ---
 
-## Project Structure
+## Database Schema (Additions to Existing)
 
+### Existing (Phase 1, complete)
 ```
-hockey-analytics/
-├── README.md
-├── REQUIREMENTS.md          # This file
-├── docker-compose.yml
-├── .env.example
-│
-├── backend/
-│   ├── cmd/
-│   │   └── api/
-│   │       └── main.go      # API entrypoint
-│   ├── internal/
-│   │   ├── api/             # HTTP handlers
-│   │   ├── models/          # Data models
-│   │   ├── repository/      # Database access
-│   │   ├── service/         # Business logic
-│   │   └── config/          # Configuration
-│   ├── go.mod
-│   └── go.sum
-│
-├── etl/
-│   ├── src/
-│   │   ├── __init__.py
-│   │   ├── extract/         # Data extraction
-│   │   │   ├── nhl_api.py
-│   │   │   └── moneypuck.py
-│   │   ├── transform/       # Data transformation
-│   │   │   └── transform.py
-│   │   ├── load/            # Database loading
-│   │   │   └── loader.py
-│   │   └── jobs/            # Scheduled jobs
-│   │       ├── initial_load.py
-│   │       └── daily_update.py
-│   ├── requirements.txt
-│   └── pyproject.toml
-│
-├── ml/
-│   ├── src/
-│   │   ├── __init__.py
-│   │   ├── features/        # Feature engineering
-│   │   │   └── features.py
-│   │   ├── models/          # ML models
-│   │   │   ├── baseline.py
-│   │   │   └── xgboost_model.py
-│   │   ├── train/           # Training pipelines
-│   │   │   └── train.py
-│   │   └── predict/         # Prediction generation
-│   │       └── predict.py
-│   ├── notebooks/           # Jupyter notebooks for exploration
-│   ├── requirements.txt
-│   └── pyproject.toml
-│
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   ├── hooks/
-│   │   ├── api/
-│   │   └── App.tsx
-│   ├── package.json
-│   └── vite.config.ts
-│
-├── database/
-│   ├── migrations/          # SQL migrations
-│   │   └── 001_initial.sql
-│   └── seeds/               # Seed data
-│
-└── scripts/
-    ├── setup.sh             # Initial setup script
-    └── deploy.sh            # Deployment script
+players, teams, seasons, games
+skater_game_logs (hypertable), goalie_game_logs (hypertable)
+skater_season_stats, goalie_season_stats
+skater_advanced_stats
+player_projections
+fantasy_leagues, fantasy_teams, fantasy_rosters
+etl_runs
+```
+
+### New Tables Required
+```sql
+-- Auth & billing
+users (id, email, password_hash, email_verified, created_at)
+subscriptions (user_id, stripe_customer_id, stripe_subscription_id, tier, status, current_period_end)
+
+-- Platform integrations
+platform_connections (user_id, platform, access_token, refresh_token, token_expires_at, platform_user_id)
+user_leagues (user_id, platform, platform_league_id, name, scoring_type, scoring_settings jsonb, roster_positions jsonb)
+user_teams (user_id, user_league_id, platform_team_id, name)
+user_rosters (user_team_id, player_id, acquired_at, is_keeper)
+
+-- Real-time data
+line_combinations (team_id, player_id, date, line_number, pp_unit, recorded_at)
+player_injury_history (player_id, season_id, games_missed, injury_type, start_date, end_date)
+
+-- Alerts
+alert_preferences (user_id, player_id, alert_types text[])
+alert_events (user_id, player_id, type, message, sent_at, read_at)
+
+-- Trade value
+trade_value_history (player_id, date, value_score)
 ```
 
 ---
 
-## Development Phases
+## API Endpoints
 
-### Phase 1: Data Pipeline (Week 1-2)
-- [ ] Set up PostgreSQL + TimescaleDB
-- [ ] Implement NHL API client
-- [ ] Implement MoneyPuck downloader
-- [ ] Create database schema
-- [ ] Build initial data load script
-- [ ] Build daily update script
-- [ ] Load historical data (2008-present)
+### Auth
+```
+POST /api/auth/register
+POST /api/auth/login
+POST /api/auth/refresh
+POST /api/auth/logout
+POST /api/auth/verify-email
+POST /api/auth/forgot-password
+POST /api/auth/reset-password
+```
 
-### Phase 2: ML Model (Week 3-4)
-- [ ] Exploratory data analysis in Jupyter
-- [ ] Feature engineering pipeline
-- [ ] Baseline linear regression model
-- [ ] XGBoost model with full features
-- [ ] Model evaluation and tuning
-- [ ] Prediction generation pipeline
-- [ ] Regression candidate detection
+### Billing
+```
+GET  /api/billing/status
+POST /api/billing/subscribe
+POST /api/billing/cancel
+POST /api/billing/webhook           (Stripe webhook)
+```
 
-### Phase 3: API (Week 5-6)
-- [ ] Go project setup
-- [ ] Database repository layer
-- [ ] Player endpoints
-- [ ] Projection endpoints
-- [ ] Fantasy roster endpoints
-- [ ] Trade analysis endpoint
+### Platform Integrations
+```
+GET    /api/integrations
+POST   /api/integrations/yahoo/connect
+GET    /api/integrations/yahoo/callback
+POST   /api/integrations/yahoo/sync
+POST   /api/integrations/espn/connect
+POST   /api/integrations/fantrax/connect
+DELETE /api/integrations/:platform
+```
 
-### Phase 4: Frontend (Week 7-8)
-- [ ] React project setup with Vite
-- [ ] Dashboard page
-- [ ] Player browser and detail pages
-- [ ] Roster management
-- [ ] Trade analyzer UI
-- [ ] Draft board
+### Players & Projections
+```
+GET /api/players                        (paginated, filterable; top-100 for free tier)
+GET /api/players/:id                    (detail + projections + injury history)
+GET /api/players/:id/game-log
+GET /api/players/:id/trade-value        (Elite)
+GET /api/players/search?q=
+GET /api/projections/rankings           (configurable scoring; exportable)
+GET /api/projections/regression         (buy-low / sell-high)
+GET /api/schedule/analysis?from=&to=    (games-played calendar)
+```
 
-### Phase 5: Polish & Deploy (Week 9-10)
-- [ ] Docker containerization
-- [ ] CI/CD pipeline
-- [ ] Deploy to VPS
-- [ ] Monitoring and logging
-- [ ] Documentation
+### Personalized (requires platform connection)
+```
+GET  /api/leagues
+GET  /api/leagues/:id/waiver-wire       (personalized pickups)
+GET  /api/leagues/:id/category-optimizer
+GET  /api/leagues/:id/playoff-planner
+GET  /api/teams/:id/roster
+POST /api/trades/analyze
+GET  /api/trades/suggestions            (proactive trade targets)
+```
+
+### Alerts
+```
+GET   /api/alerts
+POST  /api/alerts/preferences
+PATCH /api/alerts/:id/read
+```
+
+### Dynasty (Elite)
+```
+GET /api/prospects
+GET /api/players/:id/dynasty-value
+```
+
+### NHL Reference
+```
+GET /api/nhl/teams
+GET /api/nhl/teams/:id/roster
+GET /api/nhl/teams/:id/schedule
+```
 
 ---
 
 ## Non-Functional Requirements
 
 ### Performance
-- Dashboard load time < 2 seconds
-- Player search results < 500ms
-- Trade analysis < 1 second
-- Support 17 years of historical data (~1M+ game log records)
+- Dashboard load: < 2s
+- Player search: < 500ms
+- Waiver wire recommendations: < 2s (pre-computed nightly, personalized on request)
+- Trade analysis: < 1s
+- Rankings page: served from Redis cache, < 200ms
 
 ### Reliability
-- Daily ETL job completes successfully
-- Graceful handling of NHL API rate limits
-- Retry logic for failed requests
-- ETL job tracking and alerting on failure
+- Intraday ETL (4–6pm EST) must complete before 5:30pm — scratches post-deadline matter
+- Daily ETL must complete before 8am — before users check morning waiver wire
+- Alert delivery: injury/scratch alerts within 30min of source confirmation
+- ETL failure → PagerDuty/email alert to operator
+- Retry logic with exponential backoff on NHL API rate limits
 
 ### Security
-- Environment variables for secrets
-- No API keys in code
-- HTTPS only in production
-- Database not exposed publicly
+- Passwords: bcrypt, min cost 12
+- JWT: RS256, short-lived access tokens
+- OAuth tokens: encrypted at rest
+- HTTPS only in production (Caddy handles cert)
+- DB not publicly exposed
+- Stripe webhooks: verified by signature
+- Rate limiting on auth endpoints
+
+### Scalability
+- Single VPS (4 vCPU, 8GB RAM) sufficient for initial launch
+- Redis caches projection rankings, VORP calculations
+- TimescaleDB handles historical query load
+- Background jobs via River (Postgres-backed queue, no extra infra)
 
 ### Maintainability
-- Type hints in Python code
-- Go interfaces for testability
-- Database migrations for schema changes
-- Comprehensive logging
+- Go: interfaces for testability, structured logging (slog)
+- Python: type hints throughout, pytest for ETL and ML
+- DB: all schema changes via numbered migrations
+- ETL runs tracked in `etl_runs` table with status and error logs
 
 ---
 
-## Open Questions / Future Considerations
+## Out of Scope
 
-1. **Real-time updates during games?** - Currently scoped as daily only
-2. **Mobile app?** - Could add React Native or Flutter later
-3. **Multi-user support?** - Currently single user, could add auth later
-4. **Paid data sources?** - Elite Prospects, Evolving Hockey have more data
-5. **Goalie projections?** - More volatile, may need different approach
-6. **Prospect projections?** - Limited NHL data, would need junior stats
-7. **Playoff projections?** - Different dynamics than regular season
-8. **Integration with fantasy platforms?** - Yahoo/ESPN APIs for roster sync
+- **Real-time in-game updates** — daily and intraday (4–6pm) is sufficient
+- **Mobile app** — mobile-first web; native app is future consideration
+- **Building fantasy league management** — do not compete with Yahoo/Fantrax on roster/waiver/trade infrastructure; integrate with them
+- **DFS tools** — different product, different user
+- **Goalie projections (v1)** — more volatile; ship skater projections first
+- **Prospect junior stats** — limited NHL data; use ETA estimates and prospect rankings from public sources initially
+- **Paid data sources** — Elite Prospects, Evolving Hockey are future upgrades if free sources prove insufficient

@@ -1,181 +1,99 @@
-# CLAUDE.md - Hockey Fantasy Analytics
+# CLAUDE.md - PuckWise
 
 ## Project Summary
 
-Fantasy hockey analytics platform for predicting player performance to assist with drafting and trading decisions. Single-user, self-hosted application.
+Multi-tenant SaaS for fantasy hockey analytics. Personalized waiver wire, trade analysis, category league support, and playoff planning — driven by the user's actual roster imported from Yahoo/ESPN/Fantrax. Stripe-billed subscription tiers.
+
+See `REQUIREMENTS.md` for full product spec and `PLAN.md` for development roadmap.
 
 ## Tech Stack
 
-- **Database:** PostgreSQL 15+ with TimescaleDB extension
+- **Database:** PostgreSQL 15+ with TimescaleDB
+- **Cache:** Redis
 - **ETL/ML:** Python 3.11+ (pandas, scikit-learn, XGBoost)
+- **Job Queue:** River (Go, Postgres-backed)
 - **API:** Go 1.22+ with Chi router
-- **Frontend:** React 18+ with Vite, TypeScript, Tailwind, Recharts
-- **Deployment:** Docker Compose on Hetzner/OVH VPS
-
-## Data Sources
-
-### NHL API (Primary)
-- Base: `https://api-web.nhle.com/v1`
-- Stats: `https://api.nhle.com/stats/rest/en`
-- Data: Game logs, rosters, schedules, season stats
-- Coverage: 2008-present
-
-### MoneyPuck (Advanced Stats)
-- Base: `https://moneypuck.com/moneypuck/playerData`
-- Data: xG, Corsi, Fenwick, PDO, WAR, shot data
-- Format: CSV downloads
-- Coverage: 2007-present
-
-## Core Entities
-
-```
-players (nhl_id, name, position, birth_date, height, weight)
-teams (nhl_id, abbreviation, name, conference, division)
-seasons (season_id like "20232024", start_year, end_year)
-games (nhl_game_id, season_id, date, home/away teams, score)
-skater_game_logs (player_id, game_id, G, A, P, +/-, PIM, SOG, TOI, PPP) -- TimescaleDB hypertable
-goalie_game_logs (player_id, game_id, W/L, GA, SV, SV%, TOI)
-skater_season_stats (aggregated from game logs)
-skater_advanced_stats (from MoneyPuck: xG, CF%, PDO, etc.)
-player_projections (ML outputs: projected_points, confidence intervals, regression_flag)
-fantasy_leagues (league settings, scoring type)
-fantasy_teams (teams in a league)
-fantasy_rosters (player assignments)
-```
-
-## Key Features
-
-1. **Season Projections** - Full-year point predictions for drafting
-2. **Rolling Projections** - Short-term predictions for trading
-3. **Regression Detection** - Buy-low (unlucky) / sell-high (lucky) candidates using shooting%, PDO, xG
-4. **Roster Management** - Track my roster + other managers' rosters
-5. **Trade Analyzer** - Evaluate trades with positional scarcity (VORP)
-6. **Draft Rankings** - Configurable for points or category leagues
-
-## ML Model
-
-**Target:** Season total points (goals, assists)
-
-**Key Features:**
-- Historical production (1yr, 3yr, 5yr rolling PPG)
-- Age (peak 24-28, decline after)
-- Games played % (durability)
-- Team context (projected team GF, line assignment, PP unit)
-- xG vs actual goals (regression signal)
-- Shooting % z-score (regression signal)
-- PDO deviation from 1.0 (luck indicator)
-
-**Approach:** Start with Ridge regression baseline, then XGBoost with full features.
-
-## API Endpoints
-
-```
-GET  /api/players              - List players (paginated, filterable)
-GET  /api/players/:id          - Player detail + projections
-GET  /api/players/:id/game-log - Game history
-GET  /api/projections/rankings - Draft rankings
-GET  /api/projections/regression - Buy-low/sell-high candidates
-POST /api/trades/analyze       - Evaluate proposed trade
-GET  /api/leagues              - My fantasy leagues
-POST /api/leagues/:id/teams    - Add team to league
-GET  /api/teams/:id/roster     - Team roster
-POST /api/teams/:id/roster     - Add player to roster
-```
+- **Auth:** JWT with refresh tokens; OAuth 2.0 for platform integrations
+- **Billing:** Stripe
+- **Notifications:** Resend (email) + Web Push
+- **Frontend:** React 18+, Vite, TypeScript, Tailwind, Recharts — mobile-first
+- **Deployment:** Docker Compose, Caddy reverse proxy, Hetzner/OVH VPS
 
 ## Project Structure
 
 ```
-hockey-analytics/
-├── backend/           # Go API
+puckwise/
+├── backend/
 │   ├── cmd/api/
-│   └── internal/{api,models,repository,service}/
-├── etl/               # Python data pipeline
-│   └── src/{extract,transform,load,jobs}/
-├── ml/                # Python ML models  
-│   └── src/{features,models,train,predict}/
-├── frontend/          # React app
-│   └── src/{components,pages,hooks,api}/
+│   └── internal/
+│       ├── api/            # Route handlers
+│       ├── auth/           # JWT middleware
+│       ├── billing/        # Stripe client + webhook
+│       ├── integrations/   # Yahoo/ESPN/Fantrax OAuth + sync
+│       ├── notifications/  # Email + web push
+│       ├── models/
+│       ├── repository/
+│       └── service/
+├── etl/
+│   └── src/
+│       ├── extract/        # nhl_api.py, moneypuck.py, lines.py
+│       ├── transform/
+│       ├── load/
+│       └── jobs/
+│           ├── initial_load.py
+│           ├── daily_update.py      # midnight: stats + projections
+│           └── intraday_update.py   # 4-6pm EST: injuries, scratches, lines
+├── ml/
+│   └── src/
+│       ├── features/       # skater_features.py
+│       ├── models/         # ridge.py, xgboost_model.py, ensemble.py
+│       ├── train/
+│       └── predict/        # outputs points + per-category projections
+├── frontend/
+│   └── src/
+│       ├── components/
+│       ├── pages/
+│       ├── hooks/
+│       └── api/
 ├── database/
 │   └── migrations/
+├── REQUIREMENTS.md
+├── PLAN.md
 └── docker-compose.yml
 ```
-
-## Development Order
-
-1. **Database** - Schema with TimescaleDB, migrations ✅
-2. **ETL** - NHL API client, MoneyPuck downloader, loaders ✅
-3. **Initial Load** - Historical data 2008-present ✅
-4. **ML** - Feature engineering, baseline model, XGBoost ✅
-5. **API** - Go endpoints for players, projections, rosters
-6. **Frontend** - Dashboard, player browser, trade analyzer
-7. **Deploy** - Docker, VPS setup
 
 ## Progress Log
 
 ### Phase 1: Database ✅
-- PostgreSQL 15 with TimescaleDB extension
-- 11 migrations covering all entities
-- Tables: players, teams, seasons, games, skater/goalie_game_logs (hypertables), season_stats, advanced_stats, projections, fantasy tables
-- Docker Compose setup for local dev
+- PostgreSQL 15 + TimescaleDB, 11 migrations
+- Hypertables: skater_game_logs, goalie_game_logs
 
 ### Phase 2: ETL ✅
-- NHL API client (`etl/src/extract/nhl_api.py`, `nhl_stats_api.py`)
-- MoneyPuck CSV downloader (`etl/src/extract/moneypuck.py`)
-- Transform pipelines for players, game logs
-- Database loaders with upsert logic
+- `etl/src/extract/nhl_api.py`, `nhl_stats_api.py`, `moneypuck.py`
+- Transform + upsert loaders
 
 ### Phase 3: Initial Load ✅
-- Loaded all data from 2008-2025
-- ~9,753 player-seasons of training data
-- Advanced stats (xG, Corsi, PDO, WAR) from MoneyPuck
+- 2008–2025 loaded, ~9,753 player-seasons
 
 ### Phase 4: ML ✅
-- Feature engineering (`ml/src/features/skater_features.py`):
-  - Historical PPG (1yr, 3yr, 5yr rolling)
-  - Age curves (peak 24-28, decline factor)
-  - Durability (games played %)
-  - Regression signals (shooting% z-score, PDO deviation, goals vs xG)
-- Models (`ml/src/models/`):
-  - Ridge regression baseline: MAE 9.69 pts, R² 0.640
-  - XGBoost: MAE 9.86 pts, R² 0.619
-- Prediction pipeline generates 721 player projections
-- Regression detection identifies buy-low/sell-high candidates
-- Top feature importances: ppg_1yr (30%), ppg_3yr (25%), ppg_5yr (11%)
+- `ml/src/features/skater_features.py`
+- Ridge: MAE 9.69, R² 0.640 | XGBoost: MAE 9.86, R² 0.619
+- 721 projections generated
 
-## Fantasy Scoring (Configurable)
-
-**Points League Example:**
-- Goals: 3 pts, Assists: 2 pts, +/-: 0.5 pts
-- PPP: 1 pt bonus, SOG: 0.3 pts, Hits/Blocks: 0.2 pts
-- Wins: 5 pts, Saves: 0.2 pts, GA: -1 pt, SO: 3 pts
-
-**Category League:** G, A, +/-, PIM, PPP, SOG, Hits, Blocks | W, GAA, SV%, SO
-
-## Key Algorithms
-
-**VORP (Value Over Replacement):**
-- Calculate baseline stats by position (replacement level)
-- Player value = stats - replacement level
-- Accounts for positional scarcity (60pt C < 55pt RW)
-
-**Regression Detection:**
-- Shooting% z-score > 2: sell-high candidate
-- Shooting% z-score < -2: buy-low candidate
-- PDO > 1.02: sell-high (lucky)
-- PDO < 0.98: buy-low (unlucky)
-- Goals >> xG: sell-high
-- Goals << xG: buy-low
+### Phase 5–12: Pending
+See `PLAN.md`.
 
 ## Commands Reference
 
 ```bash
 # ETL
-python -m etl.src.jobs.initial_load    # Load all historical data
-python -m etl.src.jobs.daily_update    # Daily refresh
+python -m etl.src.jobs.initial_load
+python -m etl.src.jobs.daily_update
+python -m etl.src.jobs.intraday_update
 
 # ML
-python -m ml.src.train.train           # Train models
-python -m ml.src.predict.predict       # Generate projections
+python -m ml.src.train.train
+python -m ml.src.predict.predict
 
 # API
 cd backend && go run cmd/api/main.go
@@ -190,8 +108,29 @@ docker-compose up -d
 ## Environment Variables
 
 ```
-DATABASE_URL=postgresql://user:pass@localhost:5432/hockey_analytics
+DATABASE_URL=postgresql://user:pass@localhost:5432/puckwise
+REDIS_URL=redis://localhost:6379
+
 NHL_API_BASE_URL=https://api-web.nhle.com/v1
 MONEYPUCK_BASE_URL=https://moneypuck.com/moneypuck/playerData
+
+JWT_SECRET=...
+JWT_REFRESH_SECRET=...
+
+STRIPE_SECRET_KEY=...
+STRIPE_WEBHOOK_SECRET=...
+STRIPE_PRO_PRICE_ID=...
+STRIPE_ELITE_PRICE_ID=...
+
+RESEND_API_KEY=...
+VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
+
+YAHOO_CLIENT_ID=...
+YAHOO_CLIENT_SECRET=...
+ESPN_CLIENT_ID=...
+FANTRAX_CLIENT_ID=...
+
 API_PORT=8080
+APP_ENV=development
 ```

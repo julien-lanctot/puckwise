@@ -1,3 +1,6 @@
+-- Enable trigram extension for fuzzy search (if not exists)
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
 -- Players table: Player biographical information
 CREATE TABLE players (
     id SERIAL PRIMARY KEY,
@@ -29,8 +32,5 @@ CREATE INDEX idx_players_name_trgm ON players USING gin(name gin_trgm_ops);
 CREATE INDEX idx_players_position ON players(position);
 CREATE INDEX idx_players_current_team ON players(current_team_id);
 CREATE INDEX idx_players_active ON players(is_active) WHERE is_active = true;
-
--- Enable trigram extension for fuzzy search (if not exists)
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 COMMENT ON TABLE players IS 'NHL player biographical and reference data';
